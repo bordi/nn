@@ -1,0 +1,2 @@
+"""Edge CV lab package."""
+

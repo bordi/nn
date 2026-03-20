@@ -1,0 +1,20 @@
+{
+  "checkpoint": "artifacts/checkpoints/improved_best.pt",
+  "onnx": "artifacts/onnx/improved_best.onnx",
+  "rows": [
+    {
+      "version": "pytorch",
+      "accuracy": 0.1754059405940594,
+      "macro_f1": 0.13993905299060408,
+      "size_mb": 16.7193021774292,
+      "latency_ms": 147.80869546957547
+    },
+    {
+      "version": "onnx",
+      "accuracy": 0.1754059405940594,
+      "macro_f1": 0.13993905299060408,
+      "size_mb": 16.513513565063477,
+      "latency_ms": 3.992067130166106
+    }
+  ]
+}

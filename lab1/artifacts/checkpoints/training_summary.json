@@ -1,0 +1,28 @@
+{
+  "device": "mps",
+  "class_count": 101,
+  "baseline_checkpoint": "/Users/artemb/Projects/uni/neuronetworks/lab1/artifacts/checkpoints/baseline_best.pt",
+  "improved_checkpoint": "/Users/artemb/Projects/uni/neuronetworks/lab1/artifacts/checkpoints/improved_best.pt",
+  "baseline_history": [
+    {
+      "stage": "baseline",
+      "epoch": 1,
+      "train_loss": 4.4410719871521,
+      "train_accuracy": 0.060546875,
+      "val_loss": 4.1517985463142395,
+      "val_accuracy": 0.15625,
+      "elapsed_seconds": 4.242881624988513
+    }
+  ],
+  "improved_history": [
+    {
+      "stage": "improved",
+      "epoch": 1,
+      "train_loss": 3.5941062793135643,
+      "train_accuracy": 0.2548828125,
+      "val_loss": 3.8536398112773895,
+      "val_accuracy": 0.14453125,
+      "elapsed_seconds": 4.545556625002064
+    }
+  ]
+}

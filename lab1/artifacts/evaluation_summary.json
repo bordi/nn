@@ -1,61 +1,61 @@
 {
-  "checkpoint": "artifacts/checkpoints/improved_best.pt",
-  "stage": "improved",
+  "checkpoint": "artifacts/checkpoints/baseline_best.pt",
+  "stage": "baseline",
   "epoch": 1,
   "metrics": {
-    "accuracy": 0.1754059405940594,
-    "macro_f1": 0.13993905299060408
+    "accuracy": 0.1546930693069307,
+    "macro_f1": 0.1132638746842921
   },
   "top_confusions": [
     {
-      "true_label": "macarons",
-      "predicted_label": "cup_cakes",
-      "count": 194
-    },
-    {
       "true_label": "spaghetti_carbonara",
       "predicted_label": "spaghetti_bolognese",
-      "count": 182
+      "count": 169
     },
     {
-      "true_label": "beet_salad",
-      "predicted_label": "greek_salad",
-      "count": 144
-    },
-    {
-      "true_label": "huevos_rancheros",
-      "predicted_label": "shrimp_and_grits",
-      "count": 141
-    },
-    {
-      "true_label": "caprese_salad",
-      "predicted_label": "greek_salad",
-      "count": 139
+      "true_label": "macarons",
+      "predicted_label": "cup_cakes",
+      "count": 165
     },
     {
       "true_label": "frozen_yogurt",
       "predicted_label": "ice_cream",
-      "count": 133
+      "count": 139
+    },
+    {
+      "true_label": "caprese_salad",
+      "predicted_label": "greek_salad",
+      "count": 131
+    },
+    {
+      "true_label": "beet_salad",
+      "predicted_label": "greek_salad",
+      "count": 125
     },
     {
       "true_label": "fried_rice",
       "predicted_label": "risotto",
-      "count": 132
-    },
-    {
-      "true_label": "ravioli",
-      "predicted_label": "shrimp_and_grits",
-      "count": 127
+      "count": 122
     },
     {
       "true_label": "caesar_salad",
       "predicted_label": "risotto",
-      "count": 121
+      "count": 115
     },
     {
-      "true_label": "sashimi",
-      "predicted_label": "greek_salad",
-      "count": 121
+      "true_label": "pho",
+      "predicted_label": "miso_soup",
+      "count": 110
+    },
+    {
+      "true_label": "garlic_bread",
+      "predicted_label": "gyoza",
+      "count": 109
+    },
+    {
+      "true_label": "oysters",
+      "predicted_label": "ramen",
+      "count": 106
     }
   ]
 }

@@ -27,11 +27,11 @@
 
 Створіть віртуальне середовище:
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
+```console
+$ python3 -m venv .venv
+$ source .venv/bin/activate
+$ pip install --upgrade pip
+$ pip install -r requirements.txt
 ```
 
 Датасет уже очікується в:
@@ -83,14 +83,14 @@ find artifacts -maxdepth 1 -type f -name "*.json" -delete
 
 ### 1. Навчання
 
-```bash
-python main.py train
+```console
+$ python main.py train
 ```
 
 Корисний швидкий режим для перевірки коду:
 
-```bash
-python main.py train --debug-samples 256 --baseline-epochs 1 --improved-epochs 1
+```console
+$ python main.py train --debug-samples 256 --baseline-epochs 1 --improved-epochs 1
 ```
 
 Після навчання будуть створені:
@@ -101,8 +101,8 @@ python main.py train --debug-samples 256 --baseline-epochs 1 --improved-epochs 1
 
 ### 2. Оцінювання
 
-```bash
-python main.py evaluate --checkpoint artifacts/checkpoints/improved_best.pt
+```console
+$ python main.py evaluate --checkpoint artifacts/checkpoints/improved_best.pt
 ```
 
 Результат також збережеться в:
@@ -113,8 +113,8 @@ artifacts/evaluation_summary.json
 
 ### 3. Grad-CAM
 
-```bash
-python main.py gradcam --checkpoint artifacts/checkpoints/improved_best.pt
+```console
+$ python main.py gradcam --checkpoint artifacts/checkpoints/improved_best.pt
 ```
 
 За замовчуванням буде згенеровано:
@@ -136,8 +136,8 @@ outputs/gradcam/
 
 ### 4. Експорт у ONNX
 
-```bash
-python main.py export-onnx --checkpoint artifacts/checkpoints/improved_best.pt
+```console
+$ python main.py export-onnx --checkpoint artifacts/checkpoints/improved_best.pt
 ```
 
 Файл за замовчуванням:
@@ -148,10 +148,10 @@ artifacts/onnx/improved_best.onnx
 
 ### 5. Benchmark
 
-```bash
-python main.py benchmark \
-  --checkpoint artifacts/checkpoints/improved_best.pt \
-  --onnx artifacts/onnx/improved_best.onnx
+```console
+$ python main.py benchmark \
+    --checkpoint artifacts/checkpoints/improved_best.pt \
+    --onnx artifacts/onnx/improved_best.onnx
 ```
 
 Скрипт:
@@ -163,17 +163,15 @@ python main.py benchmark \
 
 ## Приклад очікуваного порядку запуску
 
-```bash
-python main.py train
-python main.py evaluate --checkpoint artifacts/checkpoints/baseline_best.pt
-python main.py evaluate --checkpoint artifacts/checkpoints/improved_best.pt
-python main.py gradcam --checkpoint artifacts/checkpoints/improved_best.pt
-python main.py export-onnx --checkpoint artifacts/checkpoints/improved_best.pt
-python main.py benchmark --checkpoint artifacts/checkpoints/improved_best.pt --onnx artifacts/onnx/improved_best.onnx
+```console
+$ python main.py train
+$ python main.py evaluate --checkpoint artifacts/checkpoints/baseline_best.pt
+$ python main.py evaluate --checkpoint artifacts/checkpoints/improved_best.pt
+$ python main.py gradcam --checkpoint artifacts/checkpoints/improved_best.pt
+$ python main.py export-onnx --checkpoint artifacts/checkpoints/improved_best.pt
+$ python main.py benchmark --checkpoint artifacts/checkpoints/improved_best.pt --onnx artifacts/onnx/improved_best.onnx
 ```
 
 ## Нотатки
 
-- Для тренування на Mac буде автоматично вибрано `mps`, якщо він доступний.
-- Для benchmark latency завжди міряється на `cpu`.
 - Якщо повний запуск довгий, спочатку використовуйте `--debug-samples`.

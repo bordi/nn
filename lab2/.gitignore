@@ -1,0 +1,26 @@
+# secrets and local env
+.env
+.env.local
+*.key
+*.pem
+
+# virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# python caches
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.py[cod]
+
+# task outputs
+artifacts/
+dataset/squad/*.json
+outputs/demos/
+
+# editor / OS noise
+.DS_Store

@@ -1,0 +1,30 @@
+flowchart TD
+    A["prepare-corpus"] --> B["artifacts/corpus/documents.jsonl"]
+    A --> C["artifacts/corpus/chunks.jsonl"]
+    A --> D["artifacts/corpus/eval_queries.jsonl"]
+
+    C --> E["build-index"]
+    E --> F["artifacts/embeddings/chunk_embeddings.npy"]
+    E --> G["artifacts/embeddings/embeddings_metadata.json"]
+    E --> H["artifacts/index/faiss.index"]
+    E --> I["artifacts/index/index_metadata.json"]
+
+    D --> J["eval-retrieval"]
+    C --> J
+    H --> J
+    I --> J
+    J --> K["artifacts/eval/retrieval_metrics.json"]
+    J --> L["artifacts/eval/retrieval_examples.jsonl"]
+
+    D --> M["eval-answers"]
+    H --> M
+    I --> M
+    C --> M
+    M --> N["artifacts/runs/answer-eval-<timestamp>/answers.csv"]
+    M --> O["artifacts/runs/answer-eval-<timestamp>/answers.jsonl"]
+    M --> P["artifacts/runs/answer-eval-<timestamp>/metadata.json"]
+
+    Q["ask / chat"] --> R["Console Output"]
+    R --> S["Answer"]
+    R --> T["used_chunk_ids"]
+    R --> U["Retrieval metadata"]

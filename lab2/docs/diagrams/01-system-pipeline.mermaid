@@ -1,0 +1,34 @@
+flowchart TD
+    A["SQuAD 2.0 Dataset<br/>train-v2.0.json + dev-v2.0.json"] --> B["prepare-corpus"]
+    B --> C["Flatten Paragraphs<br/>documents.jsonl"]
+    C --> D["Chunking<br/>word-based sliding window<br/>max_words=120, overlap=20"]
+    D --> E["chunks.jsonl"]
+    B --> F["Evaluation Queries<br/>eval_queries.jsonl<br/>gold_paragraph_id"]
+
+    E --> G["build-index"]
+    G --> H["SentenceTransformer<br/>all-MiniLM-L6-v2"]
+    H --> I["Chunk Embeddings<br/>384-d vectors"]
+    I --> J["FAISS IndexFlatIP<br/>cosine-like search"]
+    I --> K["embeddings_metadata.json"]
+    J --> L["faiss.index"]
+    J --> M["index_metadata.json"]
+
+    N["User Query"] --> O["ask / chat"]
+    O --> P["Query Embedding"]
+    P --> J
+    J --> Q["Top-k Retrieved Chunks"]
+    Q --> R["Prompt Builder<br/>grounded context + chunk IDs"]
+    R --> S["OpenAI Generation"]
+    S --> T["Answer + used_chunk_ids"]
+
+    F --> U["eval-retrieval"]
+    L --> U
+    M --> U
+    E --> U
+    U --> V["Recall@K + MRR"]
+    U --> W["retrieval_metrics.json<br/>retrieval_examples.jsonl"]
+
+    F --> X["eval-answers"]
+    O --> X
+    X --> Y["Manual Rubric Export<br/>faithfulness 1..5<br/>helpfulness 1..5"]
+    Y --> Z["artifacts/runs/<timestamp>/"]

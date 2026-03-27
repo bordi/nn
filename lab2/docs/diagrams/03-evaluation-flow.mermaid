@@ -1,0 +1,32 @@
+flowchart TD
+    A["eval_queries.jsonl"] --> B{"is_answerable?"}
+    B -->|No| C["Skip for retrieval metrics"]
+    B -->|Yes| D["Take question + gold_paragraph_id"]
+
+    D --> E["Encode Query"]
+    E --> F["Search FAISS Top-k"]
+    F --> G["Retrieved Chunks"]
+    G --> H{"Any chunk.paragraph_id == gold_paragraph_id?"}
+
+    H -->|Yes| I["Hit"]
+    H -->|No| J["Miss"]
+
+    I --> K["Find first relevant rank"]
+    K --> L["Reciprocal Rank = 1 / rank"]
+    J --> M["Reciprocal Rank = 0"]
+
+    I --> N["Recall@K contribution = 1"]
+    J --> O["Recall@K contribution = 0"]
+
+    L --> P["Aggregate across all answerable queries"]
+    M --> P
+    N --> P
+    O --> P
+
+    P --> Q["retrieval_metrics.json<br/>queries_total<br/>queries_scored<br/>queries_skipped<br/>recall@k<br/>mrr@k"]
+    P --> R["retrieval_examples.jsonl<br/>strong hits + hard misses"]
+
+    S["eval-answers"] --> T["Sample answerable queries"]
+    T --> U["Run full ask pipeline"]
+    U --> V["Export answers.csv / answers.jsonl"]
+    V --> W["Manual scoring<br/>faithfulness 1..5<br/>helpfulness 1..5<br/>notes"]

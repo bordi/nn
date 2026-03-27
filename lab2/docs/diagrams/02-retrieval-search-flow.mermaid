@@ -1,0 +1,24 @@
+flowchart LR
+    A["User Question"] --> B["Normalize Input"]
+    B --> C["SentenceTransformer Encoder<br/>query embedding"]
+    C --> D["FAISS IndexFlatIP"]
+
+    E["chunks.jsonl"] --> F["Chunk Metadata Map<br/>chunk_id, paragraph_id,<br/>document_id, title"]
+    G["index_metadata.json"] --> F
+
+    D --> H["Top-k Vector Matches<br/>score, row index"]
+    H --> I["Resolve by chunk_id<br/>not by raw file position"]
+    F --> I
+
+    I --> J["Retrieved Results"]
+    J --> K["rank"]
+    J --> L["score"]
+    J --> M["chunk_id"]
+    J --> N["paragraph_id"]
+    J --> O["preview text"]
+
+    J --> P{"Mode"}
+    P -->|--no-llm| Q["Show Retrieval Metadata Only"]
+    P -->|LLM enabled| R["Build Grounded Prompt"]
+    R --> S["OpenAI Response"]
+    S --> T["Answer + used_chunk_ids"]

@@ -1,92 +1,290 @@
-# Lab 3 Report
+# Звіт `lab3`
 
-## Theme and Goal
+## 1. Мета роботи
 
-This lab implements a reproducible `NAB/nyc_taxi` pipeline for next-step time-series forecasting and anomaly detection. The goal is to forecast the series with a small `GRU`, turn forecast residuals into anomaly scores, and report both forecasting and anomaly-detection quality using saved artifacts.
+Мета лабораторної роботи полягала в побудові пайплайна для роботи з часовими рядами, який:
+- виконує прогнозування значень ряду на наступний крок;
+- визначає аномальні точки на основі похибки прогнозу;
+- оцінює якість як прогнозування, так і детекції аномалій;
+- зберігає артефакти для повторного аналізу та візуалізації.
 
-## Dataset
+У межах реалізації було обрано датасет `NAB`, базовий підхід `persistence forecast`, нейромережеву модель `GRU` та детекцію аномалій через `forecast residuals`.
 
-The experiment uses the `NAB` dataset, specifically `realKnownCause/nyc_taxi.csv`, together with the official anomaly windows from `combined_windows.json`. The prepared input and labels are saved in [`artifacts/prepared/series.csv`](./artifacts/prepared/series.csv) and documented in [`artifacts/prepared/prepared_metadata.json`](./artifacts/prepared/prepared_metadata.json).
+## 2. Теоретична основа
 
-The prepared split is time-based:
+### 2.1. Часові ряди та прогнозування
 
-- train: 6,192 rows
-- val: 2,064 rows
-- test: 2,064 rows
+Часовий ряд — це впорядкована за часом послідовність спостережень. На відміну від звичайних tabular-даних, у часових рядах важливий порядок елементів, сезонність, тренд і локальні залежності між сусідніми значеннями.
 
-The metadata file records the boundaries, ratios, and labeling rule `start <= timestamp <= end`.
+Одна з базових задач для time series — це `next-step forecasting`, тобто передбачення наступного значення ряду на основі кількох попередніх значень. Для цього часто використовується підхід `sliding window`, коли:
+- з фрагмента довжини `window_size` формується вхід `X`;
+- наступне значення використовується як ціль `y`.
 
-## Preprocessing and Split
+Такий підхід перетворює часовий ряд на набір навчальних прикладів для моделі.
 
-Preprocessing follows a minimal cleaning contract:
+### 2.2. Чому split має бути по часу
 
-- sort by `timestamp`
-- keep the last record if duplicate timestamps appear
-- do not resample or interpolate
-- fail if timestamps or values are missing
-- fail if the cadence differs from 30 minutes
+Для часових рядів не можна випадково перемішувати дані перед розбиттям на `train/val/test`, оскільки це призводить до витоку інформації з майбутнього в минуле. Тому коректний підхід полягає в тому, щоб:
+- навчати модель на більш ранньому відрізку часу;
+- підбирати гіперпараметри на наступному відрізку;
+- фінально оцінювати якість на найпізнішому відрізку.
 
-This is captured in the prepared metadata and the saved series file. The split ratios are 60/20/20 by time, with no shuffling.
+Саме тому в цій роботі використано `time-based split`, а не випадкове перемішування.
 
-## Baseline
+### 2.3. Forecast residuals як основа для anomaly detection
 
-The baseline is a persistence forecast that predicts the next value as the last observed value in the input window. Its saved metrics are in [`artifacts/baselines/baseline_metrics.json`](./artifacts/baselines/baseline_metrics.json).
+Ідея підходу полягає в тому, що модель вчиться добре описувати “нормальну” поведінку ряду. Якщо в певний момент прогноз сильно відрізняється від реального значення, то така похибка може сигналізувати про аномалію.
 
-- val: `MAE=1311.4375`, `MAPE=11.6765`
-- test: `MAE=1190.4797`, `MAPE=12.1645`
+У цій роботі anomaly score визначається як:
 
-The baseline remains stronger than the one-epoch GRU run in this verification pass.
+`residual = abs(target - prediction)`
 
-## GRU Forecasting
+Якщо `residual` перевищує наперед обраний поріг, точка позначається як аномальна.
 
-The GRU training summary is saved in [`artifacts/models/training_summary.json`](./artifacts/models/training_summary.json). In the required verification run with `--max-epochs 1`, the best checkpoint was found at epoch 1:
+Переваги цього підходу:
+- проста інтерпретація;
+- природний зв’язок між forecasting і anomaly detection;
+- не потрібно окремо будувати autoencoder.
 
-- best validation MAE, normalized: `0.270772`
-- best validation MAE, original scale: `1850.753659`
-- normalization stats: mean `15355.137274`, std `6835.095191`
+### 2.4. Метрики оцінювання
 
-The forecast evaluation is saved in [`artifacts/eval/forecast_metrics.json`](./artifacts/eval/forecast_metrics.json):
+Для прогнозування використано:
+- `MAE` (`Mean Absolute Error`) — середня абсолютна похибка;
+- `MAPE` (`Mean Absolute Percentage Error`) — середня відносна похибка у відсотках.
 
-- val: `MAE=1850.7537`, `MAPE=16.3162`
-- test: `MAE=1742.0928`, `MAPE=125.0912`
+Для детекції аномалій використано:
+- `precision` — яка частка знайдених аномалій справді є аномаліями;
+- `recall` — яку частку справжніх аномалій вдалося знайти;
+- `F1` — гармонійне середнє між `precision` і `recall`.
 
-With only one epoch, the model underfits and does not beat the persistence baseline.
+Крім числових метрик, у роботі також виконано короткий аналіз `FP/FN`, тобто false positives і false negatives.
 
-## Residual-Based Anomaly Detection
+## 3. Обраний датасет
 
-Anomaly detection uses `abs(target - prediction)` as the anomaly score and sets the threshold from the 95th percentile of normal validation residuals. The saved threshold metadata is in [`artifacts/anomalies/threshold_summary.json`](./artifacts/anomalies/threshold_summary.json):
+У роботі використано `NAB` (`Numenta Anomaly Benchmark`), а саме файл:
+- `realKnownCause/nyc_taxi.csv`
 
-- strategy: `validation_normal_residual_abs_percentile`
-- percentile: `95`
-- threshold value: `4862.170330`
-- validation points used: `1857`
+Цей ряд містить часові значення навантаження таксі в Нью-Йорку та є зручним для лабораторної з двох причин:
+- у ряді є виражена сезонність і залежності, тому на ньому має сенс будувати forecasting;
+- для нього існують офіційні інтервали аномалій у `combined_windows.json`, що дозволяє коректно обчислити `precision/recall/F1`.
 
-The anomaly evaluation is saved in [`artifacts/eval/anomaly_metrics.json`](./artifacts/eval/anomaly_metrics.json):
+Підготовлені дані та метадані зберігаються у:
+- [`artifacts/prepared/series.csv`](./artifacts/prepared/series.csv)
+- [`artifacts/prepared/prepared_metadata.json`](./artifacts/prepared/prepared_metadata.json)
 
-- precision: `0.1746`
-- recall: `0.0177`
-- F1: `0.0322`
-- counts on test: `tp=11`, `fp=52`, `tn=1391`, `fn=610`
+За поточним підготовленим артефактом маємо:
+- `train = 6192`
+- `val = 2064`
+- `test = 2064`
 
-## FP/FN Analysis
+## 4. Архітектура реалізації
 
-The saved error analysis in [`artifacts/eval/error_analysis.json`](./artifacts/eval/error_analysis.json) shows two clear patterns:
+Реалізація побудована як `CLI`-проєкт з однією точкою входу `main.py` та модулями в `src/`.
 
-- False positives cluster around `2014-12-20 17:30:00` to `2014-12-20 18:30:00`, where the model underpredicts a sharp rise in demand even though the timestamps are not labeled anomalous.
-- False negatives cluster around `2014-12-23 11:30:00` to `2014-12-23 12:30:00`, where the series is anomalous but the residual stays below the threshold, so the detector misses the event.
+Основні команди:
+- `prepare-data` — завантаження, очищення, розмітка та time split;
+- `baseline` — запуск persistence baseline;
+- `train` — навчання `GRU`;
+- `detect` — детекція аномалій за похибкою прогнозу;
+- `evaluate` — обчислення forecasting- та anomaly-метрик;
+- `plot` — побудова графіків;
+- `run-all` — послідовний прогін усього пайплайна.
 
-This suggests the threshold is conservative and the short GRU training run smooths over abrupt local changes.
+Основні модулі:
+- `src/data.py` — підготовка даних і розмітки;
+- `src/windows.py` — формування sliding windows;
+- `src/baselines.py` — базовий persistence forecast;
+- `src/models.py` — визначення `GRU`;
+- `src/train.py` — навчання моделі та збереження checkpoint;
+- `src/anomaly.py` — обчислення residuals і anomaly flags;
+- `src/evaluate.py` — метрики та аналіз помилок;
+- `src/plots.py` — візуалізації.
 
-## Plots
+Артефакти розділені за призначенням:
+- `artifacts/prepared/` — підготовлені дані;
+- `artifacts/baselines/` — baseline-метрики;
+- `artifacts/models/` — checkpoint і training summary;
+- `artifacts/forecasts/` — прогнози моделі;
+- `artifacts/anomalies/` — anomaly predictions і threshold summary;
+- `artifacts/eval/` — фінальні метрики та error analysis;
+- `artifacts/plots/` — графіки.
 
-The report uses three saved plot artifacts:
+## 5. Передобробка даних
 
+Під час підготовки даних використано простий, але строгий контракт очищення:
+- дані сортуються за `timestamp`;
+- при дублікованих часових мітках зберігається останній запис;
+- пропуски в часових мітках або значеннях не допускаються;
+- ресемплінг та інтерполяція не використовуються;
+- якщо крок між спостереженнями відрізняється від 30 хвилин, виконання завершується з помилкою.
+
+Розмітка аномалій виконується за офіційними вікнами `NAB` за правилом:
+- `start <= timestamp <= end`
+
+Після цього дані діляться по часу у пропорції `60/20/20`:
+- `train` — для навчання моделі;
+- `val` — для валідації та вибору порогу;
+- `test` — для фінальної оцінки.
+
+Важливо, що normalisation будується лише за `train`-частиною, щоб уникнути leakage.
+
+## 6. Sliding windows і формування навчальних прикладів
+
+Щоб передати часовий ряд у нейромережу, використано `sliding windows`. Для кожної точки формується:
+- вхідне вікно з попередніх значень;
+- цільове значення на наступному кроці.
+
+При цьому в роботі дотримано двох важливих правил:
+- `train`-вікна мають цілі тільки з `train`-спліту;
+- для `val` і `test` дозволяється використовувати контекст із попереднього спліту, але ціль завжди повинна належати поточному спліту.
+
+Це дає змогу коректно оцінювати модель на межах часових відрізків без втрати контексту.
+
+## 7. Базовий метод: Persistence Forecast
+
+Як baseline використано `persistence forecast`. Його ідея дуже проста:
+- прогноз на наступний крок дорівнює останньому значенню у вхідному вікні.
+
+Це сильний базовий орієнтир для часових рядів, де сусідні значення часто є подібними.
+
+Результати baseline збережені у [`artifacts/baselines/baseline_metrics.json`](./artifacts/baselines/baseline_metrics.json):
+- `val MAE = 1311.4375`
+- `val MAPE = 11.6765`
+- `test MAE = 1190.4797`
+- `test MAPE = 12.1645`
+
+Навіть такий простий підхід виявився доволі сильним, що є типовою ситуацією для короткострокового forecasting.
+
+## 8. Нейромережева модель GRU
+
+У роботі використано невелику рекурентну модель `GRU` (`Gated Recurrent Unit`). Її було обрано з таких причин:
+- `GRU` добре підходить для послідовностей;
+- модель простіша та легша за `LSTM`;
+- для лабораторної роботи цього достатньо, щоб продемонструвати повний нейромережевий пайплайн.
+
+Модель навчається прогнозувати наступне значення ряду за попереднім вікном. Під час навчання:
+- train-дані нормалізуються за статистиками `train`;
+- validation використовується для контролю якості;
+- найкращий checkpoint зберігається на основі `validation MAE`.
+
+Підсумок навчання записується у [`artifacts/models/training_summary.json`](./artifacts/models/training_summary.json).
+
+У верифікаційному запуску з `--max-epochs 1` отримано:
+- `best_epoch = 1`
+- `best_val_mae_normalized = 0.270772`
+- `best_val_mae_original = 1850.753659`
+- `normalization mean = 15355.137274`
+- `normalization std = 6835.095191`
+
+## 9. Forecasting-результати
+
+Фінальні метрики прогнозування збережені у [`artifacts/eval/forecast_metrics.json`](./artifacts/eval/forecast_metrics.json):
+
+- `val MAE = 1850.7537`
+- `val MAPE = 16.3162`
+- `test MAE = 1742.0928`
+- `test MAPE = 125.0912`
+
+Порівняння з baseline показує, що в короткому перевірочному запуску `GRU` не перевершила `persistence forecast`. Це можна пояснити тим, що:
+- модель навчалась лише 1 епоху;
+- при такому бюджеті навчання вона недонавчається;
+- baseline для next-step задачі на гладкому ряді є дуже конкурентним.
+
+Отже, нейромережевий підхід у цьому прогоні важливий насамперед як демонстрація повного ML-pipeline, а не як найсильніша за якістю модель.
+
+## 10. Детекція аномалій
+
+Для anomaly detection обрано варіант `A`: поріг на `forecast residuals`.
+
+Схема роботи така:
+1. модель прогнозує значення ряду;
+2. обчислюється абсолютна похибка `abs(target - prediction)`;
+3. ця похибка використовується як anomaly score;
+4. якщо score перевищує поріг, точка вважається аномальною.
+
+Поріг обрано як `95-й перцентиль` похибок на нормальних точках validation-вибірки. Такий підхід обґрунтований тим, що:
+- validation-частина не використовується для навчання;
+- поріг підлаштовується під масштаб типових помилок моделі;
+- аномальні точки validation не впливають на оцінку “нормальної” похибки.
+
+Параметри порогу збережені у [`artifacts/anomalies/threshold_summary.json`](./artifacts/anomalies/threshold_summary.json):
+- `threshold_strategy = validation_normal_residual_abs_percentile`
+- `threshold_percentile = 95`
+- `threshold_value = 4862.170330`
+- `validation_points_used = 1857`
+
+## 11. Метрики anomaly detection
+
+Результати детекції аномалій збережені у [`artifacts/eval/anomaly_metrics.json`](./artifacts/eval/anomaly_metrics.json):
+
+- `precision = 0.1746`
+- `recall = 0.0177`
+- `F1 = 0.0322`
+
+Також у `test`-спліті отримано:
+- `tp = 11`
+- `fp = 52`
+- `tn = 1391`
+- `fn = 610`
+
+Інтерпретація цих результатів:
+- модель інколи коректно знаходить аномалії, тому `precision` не є нульовим;
+- однак `recall` дуже низький, тобто більшість справжніх аномалій залишаються непоміченими;
+- низький `F1` є наслідком слабкого балансу між точністю та повнотою.
+
+## 12. Аналіз FP/FN
+
+Детальний аналіз збережено у [`artifacts/eval/error_analysis.json`](./artifacts/eval/error_analysis.json).
+
+Було помічено дві характерні групи помилок.
+
+### 12.1. False Positives
+
+False positives концентруються поблизу:
+- `2014-12-20 17:30:00` - `2014-12-20 18:30:00`
+
+У цій зоні модель недооцінює локальний різкий ріст значення ряду. Через це похибка прогнозу стає великою, хоча офіційна розмітка не вважає ці точки аномальними.
+
+### 12.2. False Negatives
+
+False negatives концентруються поблизу:
+- `2014-12-23 11:30:00` - `2014-12-23 12:30:00`
+
+У цій зоні аномалія за розміткою справді присутня, але residual не перевищує обраний поріг, тому детектор її не позначає.
+
+Отже, можна зробити висновок, що:
+- поріг є відносно консервативним;
+- коротко навчена `GRU` згладжує різкі локальні зміни;
+- через це частина аномалій не переходить межу threshold.
+
+## 13. Візуалізації
+
+Для інтерпретації результатів побудовано три графіки:
 - [`artifacts/plots/test_series_anomalies.png`](./artifacts/plots/test_series_anomalies.png)
 - [`artifacts/plots/test_forecast_zoom.png`](./artifacts/plots/test_forecast_zoom.png)
 - [`artifacts/plots/test_residuals_threshold.png`](./artifacts/plots/test_residuals_threshold.png)
 
-These plots show the test series with anomaly windows, the forecast vs. target zoom, and the residuals with the detection threshold.
+Вони дозволяють побачити:
+- тестовий фрагмент ряду з аномаліями;
+- різницю між прогнозом і реальним значенням;
+- residuals разом із threshold для anomaly detection.
 
-## Conclusion
+Такі візуалізації корисні для захисту, оскільки дають змогу не лише показати числові метрики, а й пояснити поведінку моделі на конкретних часових ділянках.
 
-The pipeline is fully reproducible and saves all intermediate artifacts needed for inspection. The persistence baseline is still the strongest forecasting reference in the one-epoch verification run, while the GRU + residual-threshold detector demonstrates the complete forecasting-to-anomaly workflow. The main limitation is model quality under a very short training budget, which explains the low anomaly recall and the concentrated FP/FN patterns.
+## 14. Висновки
+
+У лабораторній роботі реалізовано повний відтворюваний пайплайн для часових рядів:
+- підготовка даних і розмітка аномалій;
+- `time-based split` без перемішування;
+- формування `sliding windows`;
+- baseline-прогнозування;
+- нейромережеве прогнозування через `GRU`;
+- детекція аномалій через похибку прогнозу;
+- оцінювання метриками та побудова графіків.
+
+Основні практичні висновки:
+- для короткострокового прогнозування простий `persistence baseline` є дуже сильним орієнтиром;
+- нейромережева модель потребує більшого бюджету навчання, щоб перевершити baseline;
+- residual-based anomaly detection є простою та інтерпретованою, але її якість сильно залежить від точності forecasting-моделі та вибору порогу.
+
+Таким чином, поставлену мету роботи досягнуто: створено пайплайн, який прогнозує часовий ряд, детектить аномалії, візуалізує результати та дозволяє виконати аналіз `FP/FN`.

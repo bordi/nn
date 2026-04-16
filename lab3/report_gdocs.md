@@ -68,9 +68,9 @@
 - у ряді є виражена сезонність і залежності, тому на ньому має сенс будувати forecasting;
 - для нього існують офіційні інтервали аномалій у `combined_windows.json`, що дозволяє коректно обчислити `precision/recall/F1`.
 
-Підготовлені дані та метадані зберігаються у:
-- [`artifacts/prepared/series.csv`](./artifacts/prepared/series.csv)
-- [`artifacts/prepared/prepared_metadata.json`](./artifacts/prepared/prepared_metadata.json)
+Підготовлені дані та метадані зберігаються у файлах:
+- `artifacts/prepared/series.csv`
+- `artifacts/prepared/prepared_metadata.json`
 
 За поточним підготовленим артефактом маємо:
 - `train = 6192`
@@ -147,7 +147,7 @@
 
 Це сильний базовий орієнтир для часових рядів, де сусідні значення часто є подібними.
 
-Результати baseline збережені у [`artifacts/baselines/baseline_metrics.json`](./artifacts/baselines/baseline_metrics.json):
+Результати baseline збережені у файлі `artifacts/baselines/baseline_metrics.json`:
 - `val MAE = 1311.4375`
 - `val MAPE = 11.6765`
 - `test MAE = 1190.4797`
@@ -167,7 +167,7 @@
 - validation використовується для контролю якості;
 - найкращий checkpoint зберігається на основі `validation MAE`.
 
-Підсумок навчання записується у [`artifacts/models/training_summary.json`](./artifacts/models/training_summary.json).
+Підсумок навчання записується у файлі `artifacts/models/training_summary.json`.
 
 У верифікаційному запуску з `--max-epochs 1` отримано:
 - `best_epoch = 1`
@@ -178,7 +178,7 @@
 
 ## 9. Forecasting-результати
 
-Фінальні метрики прогнозування збережені у [`artifacts/eval/forecast_metrics.json`](./artifacts/eval/forecast_metrics.json):
+Фінальні метрики прогнозування збережені у файлі `artifacts/eval/forecast_metrics.json`:
 
 - `val MAE = 1850.7537`
 - `val MAPE = 16.3162`
@@ -207,7 +207,7 @@
 - поріг підлаштовується під масштаб типових помилок моделі;
 - аномальні точки validation не впливають на оцінку “нормальної” похибки.
 
-Параметри порогу збережені у [`artifacts/anomalies/threshold_summary.json`](./artifacts/anomalies/threshold_summary.json):
+Параметри порогу збережені у файлі `artifacts/anomalies/threshold_summary.json`:
 - `threshold_strategy = validation_normal_residual_abs_percentile`
 - `threshold_percentile = 95`
 - `threshold_value = 4862.170330`
@@ -215,7 +215,7 @@
 
 ## 11. Метрики anomaly detection
 
-Результати детекції аномалій збережені у [`artifacts/eval/anomaly_metrics.json`](./artifacts/eval/anomaly_metrics.json):
+Результати детекції аномалій збережені у файлі `artifacts/eval/anomaly_metrics.json`:
 
 - `precision = 0.1746`
 - `recall = 0.0177`
@@ -234,7 +234,7 @@
 
 ## 12. Аналіз FP/FN
 
-Детальний аналіз збережено у [`artifacts/eval/error_analysis.json`](./artifacts/eval/error_analysis.json).
+Детальний аналіз збережено у файлі `artifacts/eval/error_analysis.json`.
 
 Було помічено дві характерні групи помилок.
 
@@ -260,9 +260,9 @@ False negatives концентруються поблизу:
 ## 13. Візуалізації
 
 Для інтерпретації результатів побудовано три графіки:
-- [`artifacts/plots/test_series_anomalies.png`](./artifacts/plots/test_series_anomalies.png)
-- [`artifacts/plots/test_forecast_zoom.png`](./artifacts/plots/test_forecast_zoom.png)
-- [`artifacts/plots/test_residuals_threshold.png`](./artifacts/plots/test_residuals_threshold.png)
+- `artifacts/plots/test_series_anomalies.png`
+- `artifacts/plots/test_forecast_zoom.png`
+- `artifacts/plots/test_residuals_threshold.png`
 
 Вони дозволяють побачити:
 - тестовий фрагмент ряду з аномаліями;
@@ -273,19 +273,19 @@ False negatives концентруються поблизу:
 
 ### 13.1. Тестовий ряд з аномаліями
 
-![Тестовий ряд з позначеними аномаліями](./artifacts/plots/test_series_anomalies.png)
+Рисунок 1. Тестовий ряд з позначеними аномаліями.
 
 На цьому графіку показано тестову частину часового ряду з виділеними аномальними ділянками. Він дає змогу візуально співставити поведінку ряду та часові інтервали, у яких детекція аномалій є особливо важливою.
 
 ### 13.2. Порівняння прогнозу та реальних значень
 
-![Порівняння прогнозу GRU та реальних значень](./artifacts/plots/test_forecast_zoom.png)
+Рисунок 2. Порівняння прогнозу `GRU` та реальних значень.
 
 Цей графік демонструє збільшений фрагмент тестового відрізка, де можна порівняти прогноз `GRU` з фактичними значеннями ряду. Саме на таких ділянках добре видно локальні розходження, які формують похибку прогнозу.
 
 ### 13.3. Residuals і поріг детекції
 
-![Residuals і поріг anomaly detection](./artifacts/plots/test_residuals_threshold.png)
+Рисунок 3. `Residuals` і поріг `anomaly detection`.
 
 На цьому графіку зображено абсолютні похибки прогнозу (`residuals`) разом із порогом детекції. Якщо residual перевищує threshold, відповідна точка вважається аномальною.
 
